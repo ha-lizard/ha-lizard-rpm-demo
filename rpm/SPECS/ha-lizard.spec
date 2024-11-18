@@ -12,7 +12,7 @@ Group:          Productivity/Clustering/HA
 BuildArch:      noarch
 License:        GPLv3+
 URL:            https://www.ha-lizard.com
-#Source0:       ha-lizard.tar.gz
+Source0:       ha-lizard.tar.gz
 
 %description
 HA-lizard provides complete automation for managing Xen server pools utilizing the XAPI management interface and toolstack (as in Xen Cloud Platform and XenServer). This hyper-converged software suite delivers full HA features within a given pool. The design is lightweight with no compromise to system stability, eliminating the need for traditional cluster management suites. HA logic includes detection and recovery of failed services and hosts.

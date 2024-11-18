@@ -19,17 +19,20 @@ jobs:
         sudo apt-get install -y rpm
 
         # Set up rpmbuild directory structure
+        echo "creating rpmbuild directory structure"
         mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 
         # Copy files into rpmbuild structure
         cp -R rpm/SPECS/* ~/rpmbuild/SPECS/
+
         # TODO: move code to source directory and avoid copying everything :-(
         tar -czf ~/rpmbuild/SOURCES/ha-lizard.tar.gz .
+        find ~/rpmbuild/
 
     - name: Build RPM
       run: |
         # Build the RPM package
-        rpmbuild -bb ~/rpmbuild/SPECS/*.spec
+        rpmbuild -ba ~/rpmbuild/SPECS/*.spec
 
     - name: Upload RPM Artifact
       uses: actions/upload-artifact@v3

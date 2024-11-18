@@ -1,0 +1,38 @@
+name: Build and Publish RPM on Release
+
+on:
+  release:
+    types: [published]  # Trigger when a new release is published
+
+jobs:
+  build-rpm:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Set Up RPM Build Environment
+      run: |
+        # Install required tools
+        sudo apt-get update
+        sudo apt-get install -y rpm rpm-build
+
+        # Set up rpmbuild directory structure
+        mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+
+        # Copy files into rpmbuild structure
+        cp -R rpm/SPECS/* ~/rpmbuild/SPECS/
+        # TODO: move code to source directory and avoid copying everything :-(
+        tar -czf ~/rpmbuild/SOURCES/ha-lizard.tar.gz .
+
+    - name: Build RPM
+      run: |
+        # Build the RPM package
+        rpmbuild -bb ~/rpmbuild/SPECS/*.spec
+
+    - name: Upload RPM Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: rpm-package
+        path: ~/rpmbuild/RPMS/**/*.rpm

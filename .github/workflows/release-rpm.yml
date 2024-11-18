@@ -16,7 +16,7 @@ jobs:
       run: |
         # Install required tools
         sudo apt-get update
-        sudo apt-get install -y rpm rpm-build
+        sudo apt-get install -y rpm
 
         # Set up rpmbuild directory structure
         mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}

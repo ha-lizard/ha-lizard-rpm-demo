@@ -43,8 +43,8 @@ jobs:
         echo ${VERSION}
         echo ${RELEASE}
         # Build the RPM package
-        sed -i "s/__VERSION__/${VERSION}/g" rpm/SPECS/ha-lizard.spec
-        sed -i "s/__RELEASE__/${RELEASE}/g" rpm/SPECS/ha-lizard.spec
+        sed -i "s/__VERSION__/${VERSION}/g" ~/rpm/SPECS/*.spec
+        sed -i "s/__RELEASE__/${RELEASE}/g" ~/rpm/SPECS/*.spec
         rpmbuild -ba ~/rpmbuild/SPECS/*.spec
 
     - name: Upload RPM Artifact

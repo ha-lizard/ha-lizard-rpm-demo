@@ -10,7 +10,7 @@ jobs:
 
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set Up RPM Build Environment
       run: |
@@ -29,13 +29,26 @@ jobs:
         tar -czf ~/rpmbuild/SOURCES/ha-lizard.tar.gz .
         find ~/rpmbuild/
 
+    - name: Extract version and release
+      id: versioning
+      run: |
+        VERSION=$(git describe --tags --abbrev=0 | sed 's/^v//')
+        RELEASE=$(git rev-list --count HEAD)
+        echo "VERSION=${VERSION}" >> $GITHUB_ENV
+        echo "RELEASE=${RELEASE}" >> $GITHUB_ENV
+
     - name: Build RPM
       run: |
+        export
+        echo ${VERSION}
+        echo ${RELEASE}
         # Build the RPM package
+        sed -i "s/__VERSION__/${VERSION}/g" rpm/SPECS/ha-lizard.spec
+        sed -i "s/__RELEASE__/${RELEASE}/g" rpm/SPECS/ha-lizard.spec
         rpmbuild -ba ~/rpmbuild/SPECS/*.spec
 
     - name: Upload RPM Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: rpm-package
         path: ~/rpmbuild/RPMS/**/*.rpm

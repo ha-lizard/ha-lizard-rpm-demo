@@ -1,59 +1,75 @@
-name: Build and Publish RPM on Release
+name: Build and Publish SRPM and RPM on Release
 
 on:
   release:
-    types: [published]  # Trigger when a new release is published
+    types: [published] # Trigger when a new release is published
 
 jobs:
   build-rpm:
     runs-on: ubuntu-latest
 
+    env:
+      BUILD_DIR: ~/rpmbuild
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
+      # Step 1: Checkout the code
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    - name: Set Up RPM Build Environment
-      run: |
-        # Install required tools
-        sudo apt-get update
-        sudo apt-get install -y rpm
+      # Step 2: Set up the build environment
+      - name: Set Up Build Environment
+        run: |
+          set -euo pipefail
 
-        # Set up rpmbuild directory structure
-        echo "creating rpmbuild directory structure"
-        mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+          # Install required dependencies
+          sudo apt update
+          sudo DEBIAN_FRONTEND=noninteractive apt install -y rpm gh
 
-        # Copy files into rpmbuild structure
-        cp -R rpm/SPECS/* ~/rpmbuild/SPECS/
+          # Create rpmbuild directory structure
+          echo "Setting up rpmbuild directory structure"
+          mkdir -p $BUILD_DIR/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 
-        # TODO: move code to source directory and avoid copying everything :-(
-        tar -czf ~/rpmbuild/SOURCES/ha-lizard.tar.gz .
-        find ~/rpmbuild/
+          # Move spec files into the build structure
+          cp -R rpm/SPECS/*.spec $BUILD_DIR/SPECS/
 
-    - name: Extract version and release
-      id: versioning
-      run: |
-        VERSION=$(git describe --tags --abbrev=0 | sed 's/^v//')
-        RELEASE=$(git rev-list --count HEAD)
-        echo "VERSION=${VERSION}" >> $GITHUB_ENV
-        echo "RELEASE=${RELEASE}" >> $GITHUB_ENV
+          # Create the source archive
+          tar --exclude='./.git' --exclude='./rpm/SPECS' -czf $BUILD_DIR/SOURCES/ha-lizard.tar.gz .
 
-    - name: Build RPM
-      run: |
-        # Replace version and release placeholders in spec file
-        sed -i "s/__VERSION__/${VERSION}/g" ~/rpmbuild/SPECS/*.spec
-        sed -i "s/__RELEASE__/${RELEASE}/g" ~/rpmbuild/SPECS/*.spec
-        # Build the RPM package
-        rpmbuild -ba ~/rpmbuild/SPECS/*.spec
+      # Step 3: Extract version and release information
+      - name: Extract Version and Release
+        id: versioning
+        run: |
+          set -euo pipefail
 
-    - name: Upload RPM Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        path: ~/rpmbuild/RPMS/**/*.rpm
+          # Extract version from the most recent tag
+          VERSION=$(git describe --tags --abbrev=0 | sed 's/^v//')
 
-    - name: Upload RPM with gh CLI
-      run: |
-        find ~/rpmbuild
-        gh release upload "${{ github.event.release.tag_name }}" ~/rpmbuild/RPMS/**/*.rpm --clobber
-        gh release upload "${{ github.event.release.tag_name }}" ~/rpmbuild/SRPMS/*.src.rpm --clobber
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Count commits to determine the release number
+          RELEASE=$(git rev-list --count HEAD)
+
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "RELEASE=${RELEASE}" >> $GITHUB_ENV
+
+      # Step 4: Build RPM package
+      - name: Build SRPM and RPM Package
+        run: |
+          set -euo pipefail
+
+          # Replace placeholders in spec files with actual version and release
+          sed -i "s/__VERSION__/${VERSION}/g" $BUILD_DIR/SPECS/*.spec
+          sed -i "s/__RELEASE__/${RELEASE}/g" $BUILD_DIR/SPECS/*.spec
+
+          # Build the RPM package
+          rpmbuild -ba $BUILD_DIR/SPECS/*.spec
+
+      # Step 5: Upload RPM and SRPM to the GitHub Release
+      - name: Upload SRPM and RPM to GitHub Release
+        run: |
+          set -euo pipefail
+
+          # Upload binary RPMs
+          gh release upload "${{ github.event.release.tag_name }}" $BUILD_DIR/RPMS/**/*.rpm --clobber
+
+          # Upload source RPM
+          gh release upload "${{ github.event.release.tag_name }}" $BUILD_DIR/SRPMS/*.src.rpm --clobber

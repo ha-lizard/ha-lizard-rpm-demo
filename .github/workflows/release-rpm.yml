@@ -39,16 +39,19 @@ jobs:
 
     - name: Build RPM
       run: |
-        export
-        echo ${VERSION}
-        echo ${RELEASE}
-        # Build the RPM package
+        # Replace version and release placeholders in spec file
         sed -i "s/__VERSION__/${VERSION}/g" ~/rpmbuild/SPECS/*.spec
         sed -i "s/__RELEASE__/${RELEASE}/g" ~/rpmbuild/SPECS/*.spec
+        # Build the RPM package
         rpmbuild -ba ~/rpmbuild/SPECS/*.spec
 
     - name: Upload RPM Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: rpm-package
         path: ~/rpmbuild/RPMS/**/*.rpm
+
+    - name: Upload RPM with gh CLI
+      run: |
+        gh release upload "${{ github.event.release.tag_name }}" ~/rpmbuild/RPMS/**/*.rpm --clobber
+        gh release upload "${{ github.event.release.tag_name }}" ~/rpmbuild/SRPMS/**/*.src.rpm --clobber
+

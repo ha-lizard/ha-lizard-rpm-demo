@@ -52,6 +52,7 @@ jobs:
 
     - name: Upload RPM with gh CLI
       run: |
+        find ~/rpmbuild
         gh release upload "${{ github.event.release.tag_name }}" ~/rpmbuild/RPMS/**/*.rpm --clobber
         gh release upload "${{ github.event.release.tag_name }}" ~/rpmbuild/SRPMS/**/*.src.rpm --clobber
       env:

@@ -9,7 +9,6 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      BUILD_DIR: ~/rpmbuild
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       ACTIONS_RUNNER_DEBUG: true
 
@@ -29,17 +28,17 @@ jobs:
 
           # Create rpmbuild directory structure
           echo "Setting up rpmbuild directory structure"
-          mkdir -p $BUILD_DIR/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+          mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 
           # Move spec files into the build structure
-          cp -R rpm/SPECS/*.spec $BUILD_DIR/SPECS/
+          cp -R rpm/SPECS/*.spec ~/rpmbuild/SPECS/
 
           # Create the source archive
-          tar --exclude='./.git' --exclude='./rpm/SPECS' -czf $BUILD_DIR/SOURCES/ha-lizard.tar.gz .
-          echo $BUILD_DIR
-          ls -R $BUILD_DIR
+          tar --exclude='./.git' --exclude='./rpm/SPECS' -czf ~/rpmbuild/SOURCES/ha-lizard.tar.gz .
+          echo ~/rpmbuild
+          ls -R ~/rpmbuild
           find /home/runner/rpmbuild/
-          find $BUILD_DIR
+          find ~/rpmbuild
 
       # Step 3: Extract version and release information
       - name: Extract Version and Release
@@ -62,15 +61,15 @@ jobs:
           set -euo pipefail
 
           # Replace placeholders in spec files with actual version and release
-          sed -i "s/__VERSION__/${VERSION}/g" $BUILD_DIR/SPECS/*.spec
-          sed -i "s/__RELEASE__/${RELEASE}/g" $BUILD_DIR/SPECS/*.spec
+          sed -i "s/__VERSION__/${VERSION}/g" ~/rpmbuild/SPECS/*.spec
+          sed -i "s/__RELEASE__/${RELEASE}/g" ~/rpmbuild/SPECS/*.spec
 
           # Build the RPM package
-          echo $BUILD_DIR
-          ls -R $BUILD_DIR
+          echo ~/rpmbuild
+          ls -R ~/rpmbuild
           find /home/runner/rpmbuild/
-          find $BUILD_DIR
-          rpmbuild -ba $BUILD_DIR/SPECS/*.spec
+          find ~/rpmbuild
+          rpmbuild -ba ~/rpmbuild/SPECS/*.spec
 
       # Step 5: Upload RPM and SRPM to the GitHub Release
       - name: Upload SRPM and RPM to GitHub Release
@@ -78,7 +77,7 @@ jobs:
           set -euo pipefail
 
           # Upload binary RPMs
-          gh release upload "${{ github.event.release.tag_name }}" $BUILD_DIR/RPMS/**/*.rpm --clobber
+          gh release upload "${{ github.event.release.tag_name }}" ~/rpmbuild/RPMS/**/*.rpm --clobber
 
           # Upload source RPM
-          gh release upload "${{ github.event.release.tag_name }}" $BUILD_DIR/SRPMS/*.src.rpm --clobber
+          gh release upload "${{ github.event.release.tag_name }}" ~/rpmbuild/SRPMS/*.src.rpm --clobber

@@ -44,11 +44,31 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Extract version from the most recent tag
-          VERSION=$(git describe --tags --abbrev=0 | sed 's/^v//')
+          # Get the release tag name from GitHub event data
+          TAG_NAME="${{ github.event.release.tag_name }}"
 
-          # Count commits to determine the release number
-          RELEASE=$(git rev-list --count HEAD)
+          # Extract the version (numeric part before any dash)
+          VERSION=$(echo "$TAG_NAME" | sed -E 's/^v([0-9]+\.[0-9]+\.[0-9]+)(-.*)?$/\1/')
+
+          # Initialize prerelease variable
+          PRERELEASE=""
+
+          # Check if the tag contains prerelease markers or if the release is marked as a prerelease
+          if [[ "$TAG_NAME" =~ -(rc|RC|beta|BETA) ]]; then
+            PRERELEASE=$(echo "$TAG_NAME" | sed -E 's/^.*-(rc|RC|beta|BETA).*$/\1/')
+          elif [[ "${{ github.event.release.prerelease }}" == "true" ]]; then
+            PRERELEASE="rc"
+          fi
+
+          # Get the number of commits to use as the release number
+          RELEASE_NUMBER=$(git rev-list --count HEAD)
+
+          # Combine the prerelease, and release number into the final RELEASE
+          if [ -n "$PRERELEASE" ]; then
+            RELEASE="${PRERELEASE}${RELEASE_NUMBER}"
+          else
+            RELEASE="${RELEASE_NUMBER}"
+          fi
 
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
           echo "RELEASE=${RELEASE}" >> $GITHUB_ENV
@@ -82,6 +102,9 @@ jobs:
       - name: Sign RPMs
         run: |
           set -euo pipefail
+
+          # Configure GPG_TTY to avoid warnings
+          export GPG_TTY=$(tty) || true
 
           # Configure RPM to use the GPG key
           echo "%_signature gpg" >> ~/.rpmmacros

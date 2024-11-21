@@ -71,9 +71,11 @@ jobs:
           set -euo pipefail
 
           # Import the private key from secrets
-          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --import
+          echo "Importing GPG key"
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | base64 --decode | gpg --batch --import
 
           # Ensure the trust level is set to ultimate for the imported key
+          echo "Setting trust level for GPG key"
           echo -e "5\ny\n" | gpg --command-fd 0 --edit-key "${{ secrets.GPG_KEY_ID }}" trust
 
       # Step 6: Sign RPMs

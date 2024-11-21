@@ -1,4 +1,4 @@
-name: Build and Publish SRPM and RPM on Release
+name: Build, Sign, and Publish SRPM and RPM on Release
 
 on:
   release:
@@ -10,14 +10,14 @@ jobs:
 
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      ACTIONS_RUNNER_DEBUG: true
+      ACTIONS_RUNNER_DEBUG: false
 
     steps:
       # Step 1: Checkout the code
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-            fetch-depth: 0  # Fetch all history for commit count
+          fetch-depth: 0 # Fetch all history for commit count
 
       # Step 2: Set up the build environment
       - name: Set Up Build Environment
@@ -26,7 +26,7 @@ jobs:
 
           # Install required dependencies
           sudo apt update
-          sudo DEBIAN_FRONTEND=noninteractive apt install -y rpm gh
+          sudo DEBIAN_FRONTEND=noninteractive apt install -y rpm gnupg gh
 
           # Create rpmbuild directory structure
           echo "Setting up rpmbuild directory structure"
@@ -65,7 +65,31 @@ jobs:
           # Build the RPM package
           rpmbuild -ba ~/rpmbuild/SPECS/*.spec
 
-      # Step 5: Upload RPM and SRPM to the GitHub Release
+      # Step 5: Import GPG Key
+      - name: Import GPG Key
+        run: |
+          set -euo pipefail
+
+          # Import the private key from secrets
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --import
+
+          # Ensure the trust level is set to ultimate for the imported key
+          echo -e "5\ny\n" | gpg --command-fd 0 --edit-key "${{ secrets.GPG_KEY_ID }}" trust
+
+      # Step 6: Sign RPMs
+      - name: Sign RPMs
+        run: |
+          set -euo pipefail
+
+          # Configure RPM to use the GPG key
+          echo "%_signature gpg" >> ~/.rpmmacros
+          echo "%_gpg_name ${{ secrets.GPG_KEY_ID }}" >> ~/.rpmmacros
+
+          # Sign all RPMs
+          find ~/rpmbuild/RPMS/ -name "*.rpm" -exec rpmsign --addsign {} \;
+          find ~/rpmbuild/SRPMS/ -name "*.rpm" -exec rpmsign --addsign {} \;
+
+      # Step 7: Upload RPM and SRPM to the GitHub Release
       - name: Upload SRPM and RPM to GitHub Release
         run: |
           set -euo pipefail

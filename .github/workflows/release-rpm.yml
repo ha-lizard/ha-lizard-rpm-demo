@@ -72,7 +72,7 @@ jobs:
 
           # Import the private key from secrets
           echo "Importing GPG key"
-          echo "${{ secrets.GPG_PRIVATE_KEY }}" | base64 --decode | gpg --batch --import
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
 
           # Ensure the trust level is set to ultimate for the imported key
           echo "Setting trust level for GPG key"
